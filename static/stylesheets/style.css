@@ -541,3 +541,8 @@ p.card-bio {
 .message-404 .form-inline input {
   flex: 1;
 }
+
+.large-image {
+  max-height: 100%;
+  width: 100%;
+}

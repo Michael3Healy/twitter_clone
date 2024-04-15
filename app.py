@@ -1,11 +1,12 @@
 import os
 
 from flask import Flask, render_template, request, flash, redirect, session, g
-from flask_debugtoolbar import DebugToolbarExtension
+# from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
-from forms import UserAddForm, LoginForm, MessageForm
+from forms import UserAddForm, LoginForm, MessageForm, EditUserForm
 from models import db, connect_db, User, Message
+from pdb import set_trace
 
 CURR_USER_KEY = "curr_user"
 
@@ -18,9 +19,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = (
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = False
-app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = True
+# app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = True
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "it's a secret")
-toolbar = DebugToolbarExtension(app)
+# toolbar = DebugToolbarExtension(app)
 
 app.app_context().push()
 
@@ -49,10 +50,13 @@ def do_login(user):
 
 
 def do_logout():
-    """Logout user."""
+    """Logout user. Returns boolean to be used in conditionals to check if logout was successful"""
 
     if CURR_USER_KEY in session:
         del session[CURR_USER_KEY]
+        return True
+    return False
+
 
 
 @app.route('/signup', methods=["GET", "POST"])
@@ -115,7 +119,11 @@ def login():
 def logout():
     """Handle logout of user."""
 
-    # IMPLEMENT THIS
+    if do_logout():
+        flash('Successfully logged out!', 'success')
+    else:
+        flash('Must be logged in first', 'danger')
+    return redirect('/login')
 
 
 ##############################################################################
@@ -137,6 +145,19 @@ def list_users():
 
     return render_template('users/index.html', users=users)
 
+@app.route('/users/add_remove_like/<msg_id>', methods=['POST'])
+def add_like(msg_id):
+    '''Handles click on like button on home page'''
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+    msg = Message.query.get_or_404(msg_id)
+    if msg in g.user.likes:
+        g.user.likes.remove(msg)
+    else:
+        g.user.likes.append(msg)
+    db.session.commit()
+    return redirect('/')
 
 @app.route('/users/<int:user_id>')
 def users_show(user_id):
@@ -212,8 +233,28 @@ def stop_following(follow_id):
 @app.route('/users/profile', methods=["GET", "POST"])
 def profile():
     """Update profile for current user."""
-
-    # IMPLEMENT THIS
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+    form = EditUserForm()
+    if form.validate_on_submit():
+        user = User.authenticate(g.user.username, form.password.data)
+        if not user:
+            flash('Error, incorrect password', 'danger')
+            return redirect('/')
+        try:
+            user.username = form.username.data or user.username
+            user.email= form.email.data or user.email
+            user.image_url = form.image_url.data or User.image_url.default.arg
+            user.header_image_url = form.header_image_url.data or User.header_image_url.default.arg
+            user.bio = form.bio.data or user.bio
+            db.session.commit()
+        except IntegrityError:
+            flash('Username/email already taken. Please try another', 'danger')
+            return redirect('/users/profile')
+        return redirect(f'/users/{user.id}')
+    return render_template('users/edit.html', form=form)
+    
 
 
 @app.route('/users/delete', methods=["POST"])
@@ -280,6 +321,19 @@ def messages_destroy(message_id):
 
     return redirect(f"/users/{g.user.id}")
 
+@app.route('/messages/liked')
+def show_liked_messages():
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+    messages = (Message
+                    .query
+                    .filter(Message.id.in_([msg.id for msg in g.user.likes]))
+                    .order_by(Message.timestamp.desc())
+                    .limit(100)
+                    .all())
+    return render_template('messages/liked_msgs.html', messages=messages)
+
 
 ##############################################################################
 # Homepage and error pages
@@ -296,6 +350,7 @@ def homepage():
     if g.user:
         messages = (Message
                     .query
+                    .filter((Message.user_id == g.user.id) |  (Message.user_id.in_([user.id for user in g.user.following])))
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())
