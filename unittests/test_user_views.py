@@ -149,7 +149,7 @@ class MessageViewTestCase(TestCase):
         html = resp.get_data(as_text=True)
 
         self.assertEqual(len(self.testuser.likes), 0)
-        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.status_code, 401)
         self.assertIn('Access unauthorized', html)
 
 

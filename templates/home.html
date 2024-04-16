@@ -8,7 +8,7 @@
           <div class="image-wrapper">
             <img src="{{ g.user.header_image_url }}" alt="" class="card-hero">
           </div>
-          <a href="/users/{{ g.user.id }}" class="card-link">
+          <a href="{{ url_for('users_show', user_id=g.user.id) }}" class="card-link">
             <img src="{{ g.user.image_url }}"
                  alt="Image for {{ g.user.username }}"
                  class="card-image">
@@ -18,19 +18,19 @@
             <li class="stat">
               <p class="small">Messages</p>
               <h4>
-                <a href="/users/{{ g.user.id }}">{{ g.user.messages | length }}</a>
+                <a href="{{ url_for('users_show', user_id=g.user.id) }}">{{ g.user.messages | length }}</a>
               </h4>
             </li>
             <li class="stat">
               <p class="small">Following</p>
               <h4>
-                <a href="/users/{{ g.user.id }}/following">{{ g.user.following | length }}</a>
+                <a href="{{ url_for('show_following', user_id=g.user.id) }}">{{ g.user.following | length }}</a>
               </h4>
             </li>
             <li class="stat">
               <p class="small">Followers</p>
               <h4>
-                <a href="/users/{{ g.user.id }}/followers">{{ g.user.followers | length }}</a>
+                <a href="{{ url_for('users_followers', user_id=g.user.id) }}">{{ g.user.followers | length }}</a>
               </h4>
             </li>
           </ul>
@@ -51,11 +51,11 @@
               <span class="text-muted">{{ msg.timestamp.strftime('%d %B %Y') }}</span>
               <p>{{ msg.text }}</p>
             </div>
-            <form method="POST" action="/users/add_remove_like/{{ msg.id }}" id="messages-form">
+            <form id="messages-form">
               <button class="
                 btn 
                 btn-sm 
-                {{'btn-primary' if msg in g.user.likes else 'btn-secondary'}}"
+                {{'btn-primary' if msg in g.user.likes else 'btn-secondary'}}" data-warble_id="{{msg.id}}"
               >
                 <i class="fa fa-thumbs-up"></i> 
               </button>
