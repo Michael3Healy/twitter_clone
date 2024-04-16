@@ -94,7 +94,7 @@ class User(db.Model):
         nullable=False,
     )
 
-    messages = db.relationship('Message')
+    messages = db.relationship('Message', cascade='all, delete')
 
     followers = db.relationship(
         "User",
@@ -113,7 +113,8 @@ class User(db.Model):
 
     likes = db.relationship(
         'Message',
-        secondary="likes"
+        secondary="likes",
+        cascade='all, delete'
     )
 
     def __repr__(self):

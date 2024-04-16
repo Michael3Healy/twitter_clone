@@ -88,8 +88,28 @@ class UserModelTestCase(TestCase):
             password="failed_email",
             image_url=None
         )
+
         with self.assertRaises(exc.IntegrityError):
             db.session.commit()
+
+    def test_authentication(self):
+
+        valid_u = User.signup(
+            email="test@test.com",
+            username="testuser",
+            password="HASHED_PASSWORD",
+            image_url="/static/images/default-pic.png"
+        )
+
+        auth_check_valid = User.authenticate('testuser', 'HASHED_PASSWORD')
+        auth_check_invalid_username = User.authenticate('invalid_username', 'HASHED_PASSWORD')
+        auth_check_invalid_password = User.authenticate('testuser', 'invalid_password')
+
+        self.assertEqual(auth_check_valid, valid_u)
+        self.assertFalse(auth_check_invalid_username)
+        self.assertFalse(auth_check_invalid_password)
+
+    
     
 
 
